@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}系统日志 · SentinelAI{% endblock %}
+{% block content %}
+<div class="admin-shell">
+{% include "_admin_nav.html" %}
+<section class="card admin-content">
+  <div class="heading-row"><div><h2>系统日志</h2><p class="muted">日志总数：<strong>{{ all_total }}</strong>{% if category %}，当前筛选：<strong>{{ total }}</strong>{% endif %}；时间统一为中国时间（UTC+8）。</p></div>
+    <div class="log-toolbar"><form class="filter-form" method="get"><select name="category" aria-label="日志类别"><option value="">全部类别</option>{% for item in ['账户操作','文件操作','IP 封禁','日志操作','网络流量'] %}<option value="{{ item }}" {% if category == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select><label>每页 <input name="per_page" type="number" min="10" max="500" value="{{ per_page }}"> 条</label><button type="submit">应用</button></form><a class="button" href="/admin/logs/export?{{ {'category': category}|urlencode }}">导出当前筛选 CSV</a>
+    <form action="/admin/logs/delete-all" method="post" onsubmit="return confirm('确认删除全部系统日志？本次删除操作本身仍会被记录。');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="per_page" value="{{ per_page }}"><button class="danger" type="submit">删除全部日志</button></form></div>
+  </div>
+  {% if logs %}<div class="table-wrap log-table"><table><thead><tr><th>操作时间（中国时间）</th><th>账户</th><th>类别 / 操作</th><th>来源与请求</th><th>详情</th><th>操作</th></tr></thead><tbody>{% for item in logs %}<tr>
+    <td class="mono time-cell">{{ item.occurred_at|china_time }}</td><td>{{ item.username or '未登录' }}</td><td><span class="tag">{{ item.category }}</span><br>{{ item.action }}</td>
+    <td><span class="mono">{{ item.client_ip or '-' }}</span><br>{{ item.method }} {{ item.path }} → {{ item.status_code if item.status_code is not none else '-' }}<br><small class="muted break">{{ item.user_agent or '-' }}</small></td><td class="break">{{ item.details or '-' }}</td><td><form action="/admin/logs/{{ item.id }}/delete" method="post" onsubmit="return confirm('确认删除日志 #{{ item.id }}？');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="category" value="{{ category }}"><input type="hidden" name="page" value="{{ page }}"><input type="hidden" name="per_page" value="{{ per_page }}"><button class="danger compact" type="submit">删除</button></form></td>
+  </tr>{% endfor %}</tbody></table></div>{% else %}<div class="status ok">暂无符合条件的日志。</div>{% endif %}
+  <nav class="pagination" aria-label="日志分页"><span>第 {{ page }} / {{ total_pages }} 页</span>{% if page > 1 %}<a class="button" href="?{{ {'category': category, 'per_page': per_page, 'page': page-1}|urlencode }}">上一页</a>{% endif %}{% if page < total_pages %}<a class="button" href="?{{ {'category': category, 'per_page': per_page, 'page': page+1}|urlencode }}">下一页</a>{% endif %}</nav>
+</section></div>
+{% endblock %}

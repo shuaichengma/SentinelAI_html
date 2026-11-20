@@ -1,0 +1,9 @@
+ollama
+pydantic
+charset-normalizer
+starlette
+uvicorn
+jinja2
+python-multipart
+itsdangerous
+pytest

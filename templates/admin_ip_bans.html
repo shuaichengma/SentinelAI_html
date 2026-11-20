@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}IP 封禁 · SentinelAI{% endblock %}
+{% block content %}
+<div class="admin-shell">
+{% include "_admin_nav.html" %}
+<section class="card admin-content">
+  <h2>IP 封禁</h2>
+  <p class="muted">按来源 IP 阻止访问，封禁到期后自动失效。当前请求来源 IP 为 <strong>{{ client_ip or '未知' }}</strong>，系统不允许从后台封禁该 IP。</p>
+  {% if message %}<div class="status ok">{{ message }}</div>{% endif %}{% if error %}<div class="status error">{{ error }}</div>{% endif %}
+  <div class="ban-summary"><span>封禁中 <strong>{{ effective_count }}</strong> 个</span><span>记录总数 <strong>{{ bans|length }}</strong> 个</span></div>
+  <details class="create-panel" open><summary>新增 IP 封禁</summary>
+    <form action="/admin/ip-bans/create" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="ban-ip">IP 地址</label>
+      <input id="ban-ip" name="ip_address" type="text" maxlength="64" placeholder="例如 203.0.113.10 或 2001:db8::10" autocomplete="off" required>
+      <label for="ban-duration">封禁时长</label>
+      <div class="duration-fields">
+        <input id="ban-duration" name="duration_value" type="number" min="1" max="525600" value="24" required>
+        <select name="duration_unit" aria-label="封禁时长单位"><option value="minutes">分钟</option><option value="hours" selected>小时</option><option value="days">天</option></select>
+      </div>
+      <label for="ban-reason">封禁原因</label>
+      <textarea id="ban-reason" name="reason" minlength="1" maxlength="500" rows="3" placeholder="记录恶意行为、日志来源或研判依据" required></textarea>
+      <button class="danger" type="submit">封禁 IP</button>
+    </form>
+  </details>
+  <div class="table-wrap"><table><thead><tr><th>IP 地址</th><th>状态</th><th>原因</th><th>操作账户</th><th>创建时间（中国时间）</th><th>到期或解除时间（中国时间）</th><th>操作</th></tr></thead>
+    <tbody>
+      {% for ban in bans %}
+      <tr>
+        <td class="mono break"><strong>{{ ban.ip_address }}</strong></td>
+        <td><span class="tag {{ 'ban-active' if ban.effective else ('ban-expired' if ban.is_active else 'ban-revoked') }}">{{ ban.status }}</span></td>
+        <td>{{ ban.reason }}</td>
+        <td>{{ ban.created_by }}{% if ban.unbanned_by %}<br><small class="muted">解除：{{ ban.unbanned_by }}</small>{% endif %}</td>
+        <td class="time-cell">{{ ban.created_at|china_time }}</td>
+        <td class="time-cell">{{ (ban.unbanned_at or ban.expires_at)|china_time }}</td>
+        <td>
+          {% if ban.effective %}
+          <form action="/admin/ip-bans/{{ ban.id }}/unban" method="post" onsubmit="return confirm('确认解除 {{ ban.ip_address|e }} 的封禁？');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="primary compact" type="submit">解除封禁</button>
+          </form>
+          {% else %}
+          <button class="danger compact" type="button" data-reban-ip="{{ ban.ip_address }}">再次封禁</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted">暂无 IP 封禁记录。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+</div>
+<dialog id="reban-dialog" class="ban-dialog" aria-labelledby="reban-title">
+  <form action="/admin/ip-bans/create" method="post">
+    <h3 id="reban-title">再次封禁 IP</h3>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="reban-ip">IP 地址</label>
+    <input id="reban-ip" name="ip_address" type="text" readonly required>
+    <label for="reban-duration">封禁时长</label>
+    <div class="duration-fields">
+      <input id="reban-duration" name="duration_value" type="number" min="1" max="525600" value="24" required>
+      <select id="reban-unit" name="duration_unit" aria-label="再次封禁时长单位"><option value="minutes">分钟</option><option value="hours" selected>小时</option><option value="days">天</option></select>
+    </div>
+    <label for="reban-reason">封禁原因</label>
+    <textarea id="reban-reason" name="reason" minlength="1" maxlength="500" rows="3" required></textarea>
+    <div class="dialog-actions">
+      <button class="secondary" type="button" data-dialog-close>取消</button>
+      <button class="danger" type="submit">确认封禁</button>
+    </div>
+  </form>
+</dialog>
+<script>
+(() => {
+  const dialog = document.getElementById("reban-dialog");
+  if (!dialog) return;
+  const ipInput = document.getElementById("reban-ip");
+  const durationInput = document.getElementById("reban-duration");
+  const unitInput = document.getElementById("reban-unit");
+  const reasonInput = document.getElementById("reban-reason");
+  document.querySelectorAll("[data-reban-ip]").forEach((button) => {
+    button.addEventListener("click", () => {
+      ipInput.value = button.dataset.rebanIp;
+      durationInput.value = "24";
+      unitInput.value = "hours";
+      reasonInput.value = "";
+      dialog.showModal();
+      durationInput.focus();
+    });
+  });
+  dialog.querySelector("[data-dialog-close]").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+})();
+</script>
+{% endblock %}

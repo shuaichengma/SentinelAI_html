@@ -1,0 +1,30 @@
+[Unit]
+Description=SentinelAI Traditional HTML Application
+After=network-online.target ollama.service
+Wants=network-online.target
+Requires=ollama.service
+
+[Service]
+Type=simple
+User=zgy
+Group=zgy
+WorkingDirectory=/home/zgy/Desktop/Agent_Work_Path/SentinelAI_html
+EnvironmentFile=/etc/sentinelai-html.env
+Environment="PYTHONUNBUFFERED=1"
+Environment="OLLAMA_HOST=http://127.0.0.1:11434"
+Environment="MODEL_NAME=qwen3:0.6b"
+Environment="APP_VERSION=1.0.0-html"
+Environment="DATA_DIR=data"
+Environment="UPLOADS_DIR=uploads"
+Environment="REPORTS_DIR=data/reports"
+Environment="NO_PROXY=127.0.0.1,localhost"
+Environment="no_proxy=127.0.0.1,localhost"
+ExecStart=/home/zgy/Desktop/Agent_Work_Path/SentinelAI_html/.venv/bin/uvicorn web_app:app --host 0.0.0.0 --port 8502
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

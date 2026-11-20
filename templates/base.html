@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}SentinelAI{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      {% if current_user %}
+      <a href="/"><span class="shield">🛡️</span> {{ settings.app_name }}</a>
+      <small>版本 {{ settings.app_version }} · 本机 AI 分析 · 结果必须人工复核</small>
+      {% else %}
+      <span><span class="shield">🛡️</span> {{ settings.app_name }}</span>
+      {% endif %}
+    </div>
+    {% if current_user %}
+    <div class="topbar-userbar">
+      <nav class="site-nav" aria-label="系统导航">
+        <a href="/">文件分析</a>
+        <a href="/history">上传记录</a>
+        {% if current_user.role == 'admin' %}
+        <a href="/admin">文件管理</a>
+        <a href="/admin/accounts">账户管理</a>
+        <a href="/admin/ip-bans">IP 封禁</a>
+        <a href="/admin/logs">系统日志</a>
+        {% endif %}
+      </nav>
+      <span class="role-badge {{ current_user.role }}">{{ role_label }}</span>
+      <strong class="current-username">{{ current_user.username }}</strong>
+      <form class="inline-form" action="/logout" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="topbar-button" type="submit">退出</button>
+      </form>
+    </div>
+    {% endif %}
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

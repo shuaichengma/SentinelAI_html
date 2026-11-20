@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}账户管理 · SentinelAI{% endblock %}
+{% block content %}
+<div class="admin-shell">
+{% include "_admin_nav.html" %}
+<section class="card admin-content">
+  <h2>账户管理</h2><p class="muted">管理员拥有全部功能，普通用户仅可上传文件并分析。密码不会显示或写入日志。admin 账户不可删除，但可由其他管理员停用；当前登录账户不能停用自身。</p>
+  {% if message %}<div class="status ok">{{ message }}</div>{% endif %}{% if error %}<div class="status error">{{ error }}</div>{% endif %}
+  <details class="create-panel"><summary>新建账户</summary>
+    <form action="/admin/accounts/create" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="new-username">账号</label><input id="new-username" name="username" maxlength="64" autocomplete="off" required>
+      <label for="new-password">初始密码（至少 8 个字符）</label><input id="new-password" name="password" type="password" minlength="8" maxlength="256" autocomplete="new-password" required>
+      <label for="new-role">账户角色</label><select id="new-role" name="role"><option value="user">普通用户</option><option value="admin">管理员</option></select>
+      <button class="primary" type="submit">创建账户</button></form>
+  </details>
+  <div class="table-wrap"><table><thead><tr><th>账号</th><th>角色</th><th>状态</th><th>创建时间（中国时间）</th><th>更新时间（中国时间）</th><th>操作</th></tr></thead>
+    <tbody>{% for user in users %}<tr><td><strong>{{ user.username }}</strong>{% if user.username == current_user.username %} <span class="tag">当前</span>{% endif %}</td>
+      <td><span class="tag {{ 'admin-role' if user.role == 'admin' else '' }}">{{ '管理员' if user.role == 'admin' else '普通用户' }}</span></td>
+      <td><span class="tag {{ 'enabled' if user.is_active else 'disabled' }}">{{ '已启用' if user.is_active else '已停用' }}</span></td><td class="time-cell">{{ user.created_at|china_time }}</td><td class="time-cell">{{ user.updated_at|china_time }}</td>
+      <td><div class="account-actions"><form action="/admin/accounts/{{ user.id }}/password" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input name="password" type="password" minlength="8" maxlength="256" placeholder="输入新密码" aria-label="{{ user.username }} 的新密码" required><button type="submit">修改密码</button></form>
+        {% if user.username != current_user.username %}<form action="/admin/accounts/{{ user.id }}/status" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="active" value="{{ '0' if user.is_active else '1' }}"><button class="{{ 'warning-button' if user.is_active else 'primary' }}" type="submit">{{ '停用' if user.is_active else '启用' }}</button></form>{% endif %}
+        {% if user.username not in ['admin', current_user.username] %}<form action="/admin/accounts/{{ user.id }}/delete" method="post" onsubmit="return confirm('确认删除账户 {{ user.username|e }}？');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="danger" type="submit">删除</button></form>{% elif user.username == 'admin' %}<span class="tag protected">不可删除</span>{% endif %}</div></td>
+    </tr>{% endfor %}</tbody></table></div>
+</section></div>
+{% endblock %}

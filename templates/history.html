@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}上传记录 · SentinelAI{% endblock %}
+{% block content %}
+<section class="card history-page">
+  <div class="heading-row">
+    <div>
+      <h2>{{ '全部上传记录' if showing_all else '我的上传记录' }}</h2>
+      <p class="muted">
+        {% if showing_all %}
+          管理员视图，共 {{ records|length }} 个文件，包含所有用户的上传与分析状态。
+        {% else %}
+          共 {{ records|length }} 个文件，仅展示当前账户上传的文件和分析报告。
+        {% endif %}
+      </p>
+    </div>
+    <a class="button primary" href="/">上传新文件</a>
+  </div>
+  {% if records %}
+  <div class="table-wrap history-table"><table>
+    <thead><tr>
+      <th>上传时间（中国时间）</th>
+      {% if showing_all %}<th>上传用户</th>{% endif %}
+      <th>文件名</th><th>大小</th><th>SHA-256</th><th>分析状态</th><th>操作</th>
+    </tr></thead>
+    <tbody>{% for item in records %}<tr>
+      <td class="time-cell">{{ item.uploaded_at|china_time }}</td>
+      {% if showing_all %}<td>{{ item.owner_username or '旧版记录（仅管理员）' }}</td>{% endif %}
+      <td><strong>{{ item.original_name }}</strong></td>
+      <td>{{ item.size_bytes }} 字节</td>
+      <td class="mono break">{{ item.sha256 }}</td>
+      <td>
+        {% if item.latest_report_task_id %}
+          <span class="tag enabled">已分析</span>
+          <div class="history-report-time">{{ item.latest_report_created_at|china_time }}</div>
+        {% else %}
+          <span class="tag">待分析</span>
+        {% endif %}
+      </td>
+      <td><div class="history-actions">
+        <a class="button" href="/?upload_id={{ item.id }}">{{ '查看/重新分析' if item.latest_report_task_id else '查看并分析' }}</a>
+        {% if item.latest_report_task_id %}
+        <a class="button compact" href="/reports/{{ item.latest_report_task_id }}.json">JSON</a>
+        <a class="button compact" href="/reports/{{ item.latest_report_task_id }}.md">Markdown</a>
+        {% endif %}
+      </div></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <div class="status ok">
+    {% if showing_all %}暂时没有任何用户上传文件。{% else %}当前账户还没有上传记录，请先上传待分析文件。{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

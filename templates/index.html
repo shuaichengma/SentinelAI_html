@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}文件分析 · SentinelAI{% endblock %}
+{% block content %}
+<div class="status {{ 'ok' if online else 'warn' }}">{{ model_status }}</div>
+{% if error %}<div class="status error">{{ error }}</div>{% endif %}
+<div class="grid">
+  <section class="card">
+    <h2>1. 上传与预览</h2>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="file">选择一个文本文件</label>
+      <input id="file" name="file" type="file" accept=".txt,.log,.csv,.json,.md,.xml,.yaml,.yml" required>
+      <p class="muted">最大 {{ settings.max_file_mb }} MB；上传后保存到当前应用目录的 uploads 文件夹，不会自动调用模型。</p>
+      <button type="submit">上传文件</button>
+    </form>
+    {% if text_file %}
+      <dl class="metadata">
+        <dt>文件名</dt><dd>{{ text_file.filename }}</dd>
+        <dt>大小（字节）</dt><dd>{{ text_file.raw_size }}</dd>
+        <dt>编码</dt><dd>{{ text_file.encoding }}</dd>
+        <dt>字符数</dt><dd>{{ text_file.character_count }}</dd>
+        <dt>行数</dt><dd>{{ text_file.line_count }}</dd>
+        <dt>SHA-256</dt><dd class="mono break">{{ text_file.sha256 }}</dd>
+      </dl>
+      <h3>前 50 行预览</h3>
+      <pre>{{ text_file.preview() }}</pre>
+      <p class="notice">预计分为 {{ planned_chunks }} 段分析。本机 CPU 每段可能需要数分钟，请勿重复提交。</p>
+      <form action="/analyze/{{ record.id }}" method="post" class="analysis-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="primary analysis-submit" type="submit" {% if not online %}disabled{% endif %}>开始 AI 分析</button>
+        <div class="analysis-progress" role="status" aria-live="polite" hidden>
+          <div class="progress-track"><div class="progress-bar"></div></div>
+          <strong>AI 正在分析，请勿关闭页面或重复提交……</strong>
+          <span class="muted">本机 CPU 推理可能需要数分钟。</span>
+        </div>
+      </form>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>2. 分析结果与报告</h2>
+    {% if not report %}
+      <p class="notice">上传合法文本并点击“开始 AI 分析”后，此处显示结构化结果。</p>
+    {% else %}
+      <h3>总体结论</h3>
+      <div class="conclusion">{{ conclusion }}</div>
+      <div class="metric"><span>模型自评置信度</span><strong>{{ report.result.confidence }}%</strong></div>
+      <p>{{ report.result.summary }}</p>
+      <h3>AI 评判依据</h3>
+      <p class="muted">以下内容摘自已分析文件并保留原始行号与原文，不进行脱敏处理，请严格控制页面和报告访问权限。</p>
+      {% if report.result.findings %}
+        <ol class="evidence-list">
+        {% for item in report.result.findings %}
+          <li><strong>文件第 {{ item.line_start }}-{{ item.line_end }} 行 · {{ item.category }}</strong>
+            <code>{{ item.evidence }}</code><br>判断理由：{{ item.reason }}</li>
+        {% endfor %}
+        </ol>
+      {% else %}
+        <p><strong>AI 在以下已分析文件内容中未识别出明确敏感模式：</strong></p>
+        <ul class="evidence-list">
+        {% for item in report.basis_excerpts %}
+          <li>文件第 {{ item.line_start }}-{{ item.line_end }} 行：<code>{{ item.content }}</code></li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+      <div class="status warn">AI 结果仅供研判，必须人工复核。证据按要求保留原文，可能包含敏感信息。</div>
+      {% if report.failed_chunks %}<div class="status warn">有 {{ report.failed_chunks|length }} 个分段失败。</div>{% endif %}
+      {% if report.result.findings %}
+      <div class="table-wrap"><table>
+        <thead><tr><th>类别</th><th>风险</th><th>行号</th><th>原文证据</th><th>理由</th><th>建议</th></tr></thead>
+        <tbody>{% for item in report.result.findings %}<tr>
+          <td>{{ item.category }}</td><td>{{ item.risk_level }}</td><td>{{ item.line_start }}-{{ item.line_end }}</td>
+          <td>{{ item.evidence }}</td><td>{{ item.reason }}</td><td>{{ item.recommendation }}</td>
+        </tr>{% endfor %}</tbody>
+      </table></div>
+      {% else %}<div class="status ok">没有发现项。</div>{% endif %}
+      <div class="actions">
+        <a class="button" href="/reports/{{ report.task_id }}.json">下载 JSON 报告</a>
+        <a class="button" href="/reports/{{ report.task_id }}.md">下载 Markdown 报告</a>
+      </div>
+    {% endif %}
+  </section>
+</div>
+<script src="/static/app.js" defer></script>
+{% endblock %}

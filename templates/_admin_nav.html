@@ -1,0 +1,11 @@
+<aside class="admin-sidebar">
+  <div class="admin-identity"><span>当前账户</span><strong>{{ current_user.username }}</strong><small>{{ role_label }}</small></div>
+  <nav aria-label="后台导航">
+    <a href="/">文件分析</a>
+    <a class="{{ 'active' if active_nav == 'files' else '' }}" href="/admin">文件管理</a>
+    <a class="{{ 'active' if active_nav == 'accounts' else '' }}" href="/admin/accounts">账户管理</a>
+    <a class="{{ 'active' if active_nav == 'ip_bans' else '' }}" href="/admin/ip-bans">IP 封禁</a>
+    <a class="{{ 'active' if active_nav == 'logs' else '' }}" href="/admin/logs">系统日志</a>
+  </nav>
+  <form action="/logout" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">退出登录</button></form>
+</aside>

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}后台文件管理 · SentinelAI{% endblock %}
+{% block content %}
+<div class="admin-shell">
+{% include "_admin_nav.html" %}
+<section class="card admin-content">
+  <div class="heading-row"><div><h2>文件管理</h2><p class="muted">共保存 {{ records|length }} 个上传文件，包含所有用户的上传与分析状态。</p></div></div>
+  {% if records %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>上传时间（中国时间）</th><th>上传用户</th><th>文件名</th><th>大小</th><th>SHA-256</th><th>分析状态</th><th>操作</th></tr></thead>
+    <tbody>{% for item in records %}<tr>
+      <td class="time-cell">{{ item.uploaded_at|china_time }}</td><td>{{ item.owner_username or '旧版记录（仅管理员）' }}</td><td>{{ item.original_name }}</td><td>{{ item.size_bytes }} 字节</td><td class="mono break">{{ item.sha256 }}</td>
+      <td>
+        {% if item.latest_report_task_id %}
+          <span class="tag enabled">已分析</span>
+          <div class="history-report-time">{{ item.latest_report_created_at|china_time }}</div>
+        {% else %}
+          <span class="tag">待分析</span>
+        {% endif %}
+      </td>
+      <td class="actions"><a class="button" href="/?upload_id={{ item.id }}">查看/分析</a><a class="button" href="/admin/download/{{ item.id }}">下载</a>
+        {% if item.latest_report_task_id %}<a class="button compact" href="/reports/{{ item.latest_report_task_id }}.json">JSON</a><a class="button compact" href="/reports/{{ item.latest_report_task_id }}.md">MD</a>{% endif %}
+        <form action="/admin/delete/{{ item.id }}" method="post" onsubmit="return confirm('确认删除 {{ item.original_name|e }}？');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="danger" type="submit">删除</button>
+        </form></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="status ok">暂时没有用户上传文件。</div>{% endif %}
+</section>
+</div>
+{% endblock %}
